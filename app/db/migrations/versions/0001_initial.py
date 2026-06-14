@@ -16,22 +16,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create enums first
-    userrole = sa.Enum("admin", "staff", name="userrole")
-    userrole.create(op.get_bind(), checkfirst=True)
+    conn = op.get_bind()
 
-    finishtype = sa.Enum("matte", "gloss", "satin", "textured", "woodgrain", "metallic", "other", name="finishtype")
-    finishtype.create(op.get_bind(), checkfirst=True)
-
-    uploadstatus = sa.Enum("pending", "processing", "completed", "failed", name="uploadstatus")
-    uploadstatus.create(op.get_bind(), checkfirst=True)
-
-    feedbacktype = sa.Enum("confirmed", "rejected", "corrected", name="feedbacktype")
-    feedbacktype.create(op.get_bind(), checkfirst=True)
+    # Create enums safely
+    conn.execute(sa.text("CREATE TYPE IF NOT EXISTS userrole AS ENUM ('admin', 'staff')"))
+    conn.execute(sa.text("CREATE TYPE IF NOT EXISTS finishtype AS ENUM ('matte', 'gloss', 'satin', 'textured', 'woodgrain', 'metallic', 'other')"))
+    conn.execute(sa.text("CREATE TYPE IF NOT EXISTS uploadstatus AS ENUM ('pending', 'processing', 'completed', 'failed')"))
+    conn.execute(sa.text("CREATE TYPE IF NOT EXISTS feedbacktype AS ENUM ('confirmed', 'rejected', 'corrected')"))
 
     # users
-    op.create_table(
-        "users",
+    op.create_table("users",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("email", sa.String(255), nullable=False),
         sa.Column("full_name", sa.String(255), nullable=False),
@@ -41,13 +35,13 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_users_id", "users", ["id"])
-    op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.create_index("ix_users_id", "users", ["id"], if_not_exists=True)
+    op.create_index("ix_users_email", "users", ["email"], unique=True, if_not_exists=True)
 
     # companies
-    op.create_table(
-        "companies",
+    op.create_table("companies",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("country", sa.String(100), nullable=True),
@@ -56,12 +50,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
+        if_not_exists=True,
     )
-    op.create_index("ix_companies_id", "companies", ["id"])
+    op.create_index("ix_companies_id", "companies", ["id"], if_not_exists=True)
 
     # catalogs
-    op.create_table(
-        "catalogs",
+    op.create_table("catalogs",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("year", sa.Integer(), nullable=True),
@@ -71,12 +65,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
         sa.ForeignKeyConstraint(["company_id"], ["companies.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_catalogs_id", "catalogs", ["id"])
+    op.create_index("ix_catalogs_id", "catalogs", ["id"], if_not_exists=True)
 
     # products
-    op.create_table(
-        "products",
+    op.create_table("products",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("code", sa.String(100), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
@@ -102,14 +96,14 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
         sa.ForeignKeyConstraint(["catalog_id"], ["catalogs.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_products_id", "products", ["id"])
-    op.create_index("ix_products_code", "products", ["code"])
-    op.create_index("ix_products_qdrant_point_id", "products", ["qdrant_point_id"])
+    op.create_index("ix_products_id", "products", ["id"], if_not_exists=True)
+    op.create_index("ix_products_code", "products", ["code"], if_not_exists=True)
+    op.create_index("ix_products_qdrant_point_id", "products", ["qdrant_point_id"], if_not_exists=True)
 
     # image_uploads
-    op.create_table(
-        "image_uploads",
+    op.create_table("image_uploads",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("original_filename", sa.String(500), nullable=False),
         sa.Column("storage_key", sa.String(500), nullable=False),
@@ -125,12 +119,12 @@ def upgrade() -> None:
         sa.Column("processed_at", sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(["uploaded_by"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_image_uploads_id", "image_uploads", ["id"])
+    op.create_index("ix_image_uploads_id", "image_uploads", ["id"], if_not_exists=True)
 
     # match_results
-    op.create_table(
-        "match_results",
+    op.create_table("match_results",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("upload_id", sa.Integer(), nullable=False),
         sa.Column("product_id", sa.Integer(), nullable=False),
@@ -143,12 +137,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["upload_id"], ["image_uploads.id"]),
         sa.ForeignKeyConstraint(["product_id"], ["products.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_match_results_id", "match_results", ["id"])
+    op.create_index("ix_match_results_id", "match_results", ["id"], if_not_exists=True)
 
     # feedbacks
-    op.create_table(
-        "feedbacks",
+    op.create_table("feedbacks",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("match_result_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=True),
@@ -160,8 +154,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["product_id"], ["products.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
-    op.create_index("ix_feedbacks_id", "feedbacks", ["id"])
+    op.create_index("ix_feedbacks_id", "feedbacks", ["id"], if_not_exists=True)
 
 
 def downgrade() -> None:
@@ -172,7 +167,6 @@ def downgrade() -> None:
     op.drop_table("catalogs")
     op.drop_table("companies")
     op.drop_table("users")
-
     op.execute("DROP TYPE IF EXISTS feedbacktype")
     op.execute("DROP TYPE IF EXISTS uploadstatus")
     op.execute("DROP TYPE IF EXISTS finishtype")
