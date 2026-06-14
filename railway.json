@@ -1,9 +1,9 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "deploy": {
-    "startCommand": "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+    "startCommand": "PYTHONPATH=/app alembic upgrade head && PYTHONPATH=/app python -m app.db.seed && PYTHONPATH=/app uvicorn app.main:app --host 0.0.0.0 --port $PORT",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 60,
+    "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
