@@ -129,7 +129,7 @@ async def seed():
             db.add(User(
                 email=u["email"],
                 full_name=u["full_name"],
-                hashed_password=get_password_hash(u["password"]),
+                hashed_password=get_password_hash(u["password"][:72]),
                 role=u["role"],
             ))
         await db.commit()
